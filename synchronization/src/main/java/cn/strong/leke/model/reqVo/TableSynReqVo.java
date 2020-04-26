@@ -5,16 +5,46 @@ package cn.strong.leke.model.reqVo;
  * @since 18:06
  */
 public class TableSynReqVo {
+    /**
+     * 来源数据库URL
+     */
     private String sourceUrl;
+    /**
+     * 数据库账号
+     */
     private String sourceName;
+    /**
+     * 数据库密码
+     */
     private String sourcePassword;
+    /**
+     * 目标数据库URL
+     */
     private String targetUrl;
+    /**
+     * 数据库账号
+     */
     private String targetName;
+    /**
+     * 数据库密码
+     */
     private String targetPassword;
-    private String table;
+
+    /**
+     * 数据库查询线程数
+     */
     private Integer queryPool;
+    /**
+     * 插入数据线程数量
+     */
     private Integer insertPool;
+    /**
+     * 每次数量
+     */
     private int size = 5000;
+    /**
+     * 是否每次是否休眠
+     */
     private int sleep = 0;
 
 
@@ -64,14 +94,6 @@ public class TableSynReqVo {
 
     public void setTargetPassword(String targetPassword) {
         this.targetPassword = targetPassword;
-    }
-
-    public String getTable() {
-        return table;
-    }
-
-    public void setTable(String table) {
-        this.table = table;
     }
 
     public Integer getQueryPool() {

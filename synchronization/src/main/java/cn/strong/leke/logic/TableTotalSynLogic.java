@@ -2,11 +2,11 @@ package cn.strong.leke.logic;
 
 import cn.strong.leke.config.DataSourceConfig;
 import cn.strong.leke.model.ColumnModel;
-import cn.strong.leke.model.reqVo.TableSynReqVo;
+import cn.strong.leke.model.SynchronizationModelDTO;
+import cn.strong.leke.model.reqVo.CustomTableSynReqVo;
 import cn.strong.leke.service.ThreadCurrentService;
 import cn.strong.leke.util.ColumnStringUtils;
 import cn.strong.leke.util.DataBaseUtils;
-import cn.strong.leke.util.SynchronizationModel;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -41,7 +41,7 @@ public class TableTotalSynLogic {
      *
      * @return
      */
-    public boolean synchronizationDataSource(TableSynReqVo tableSynReqVo) {
+    public boolean synchronizationDataSource(CustomTableSynReqVo tableSynReqVo) {
         String[] tables = null;
         // 初始化数据库
         DataSource targetDataSource = dataSourceConfig.dataSource(tableSynReqVo.getTargetUrl(), tableSynReqVo.getTargetName(), tableSynReqVo.getTargetPassword(), tableSynReqVo.getQueryPool() + tableSynReqVo.getInsertPool());
@@ -59,7 +59,7 @@ public class TableTotalSynLogic {
                 logger.info(t + "当前表中没有数据");
                 continue;
             }
-            SynchronizationModel synchronizationModel = new SynchronizationModel();
+            SynchronizationModelDTO synchronizationModel = new SynchronizationModelDTO();
             synchronizationModel.setSource(sourceDataSource);
             synchronizationModel.setTargetSource(targetDataSource);
             synchronizationModel.setTable(t);
@@ -68,11 +68,19 @@ public class TableTotalSynLogic {
             synchronizationModel.setSize(tableSynReqVo.getSize());
             synchronizationModel.setSleep(tableSynReqVo.getSleep());
             synchronizationModel.setShardingSize(0);
+            synchronizationModel.setQueryPool(tableSynReqVo.getQueryPool());
+            synchronizationModel.setInsertPool(tableSynReqVo.getInsertPool());
             threadCurrentService.synchronizationTable(columns.getKey(), synchronizationModel);
         }
         return false;
     }
 
+    /**
+     * 查询当前库的表
+     *
+     * @param sourceDataSource
+     * @return
+     */
     public String[] connection(DataSource sourceDataSource) {
         List<String> str = new ArrayList<>();
         Connection connection = null;

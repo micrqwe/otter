@@ -1,15 +1,12 @@
-package cn.strong.leke.util;
-
-import cn.strong.leke.model.ColumnModel;
+package cn.strong.leke.model;
 
 import javax.sql.DataSource;
-import java.util.List;
 
 /**
  * @author shaowenxing@cnstrong.cn
  * @since 15:04
  */
-public class SynchronizationModel {
+public class SynchronizationModelDTO {
 //    List<ColumnModel> columns,String table, String shardingTable, String key, String shardingKey,DataSource targetSource,
 //    javax.sql.DataSource dataSource, int size, int sleep
     private String table;
@@ -20,8 +17,23 @@ public class SynchronizationModel {
     private DataSource source;
     // 是否有分片，没有填0
     private int shardingSize;
-    private int size;
-    private int sleep;
+    /**
+     * 数据库查询线程数
+     */
+    private int queryPool=0;
+    /**
+     * 插入数据线程数量
+     */
+    private int insertPool=0;
+    /**
+     * 每次数量
+     */
+    private int size = 5000;
+    /**
+     * 是否每次是否休眠
+     */
+    private int sleep = 0;
+
 
     public String getTable() {
         return table;
@@ -93,5 +105,21 @@ public class SynchronizationModel {
 
     public void setShardingSize(int shardingSize) {
         this.shardingSize = shardingSize;
+    }
+
+    public Integer getQueryPool() {
+        return queryPool;
+    }
+
+    public void setQueryPool(Integer queryPool) {
+        this.queryPool = queryPool;
+    }
+
+    public Integer getInsertPool() {
+        return insertPool;
+    }
+
+    public void setInsertPool(Integer insertPool) {
+        this.insertPool = insertPool;
     }
 }

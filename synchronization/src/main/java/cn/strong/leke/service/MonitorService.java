@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @since 19:52
  */
 @Service
+@Deprecated
 public class MonitorService {
     // 报警规则，如果5秒内超过5000条数据， 立马打印
     private List<List<String>> list = new LinkedList<>();

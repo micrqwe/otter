@@ -59,8 +59,6 @@ public class CanalClientService {
      * 进行sql进行执行
      */
     private MysqlExecuteSqlLogic executeSqlLogic;
-    @Autowired
-    private MonitorService monitorService;
 
     public boolean synchronization(String table, String shardingTable, String key, String shardingKey, int size, int sleep, int clear) {
 /*        if (atomicBoolean.get()) {

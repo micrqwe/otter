@@ -4,7 +4,7 @@ import cn.strong.leke.dao.MysqlExecuteSqlLogic;
 import cn.strong.leke.model.ColumnModel;
 import cn.strong.leke.model.TableKey;
 import cn.strong.leke.util.ColumnStringUtils;
-import cn.strong.leke.util.SynchronizationModel;
+import cn.strong.leke.model.SynchronizationModelDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,12 +48,7 @@ public class ThreadCurrentService {
      * 读取线程控制
      */
     private AtomicInteger querySize = new AtomicInteger(0);
-    @Value("${thread.pool}")
-    private int poolSize;
-    @Value("${thread.query}")
-    private int queryThreadSize;
-    @Value("${thread.insert}")
-    private int insertThreadSize;
+
     private MysqlExecuteSqlLogic mysqlExecuteSqlLogic;
 
 
@@ -72,17 +67,17 @@ public class ThreadCurrentService {
      * @param model
      */
 //    @Async
-    public boolean synchronizationTable(List<ColumnModel> columns, SynchronizationModel model) {
+    public boolean synchronizationTable(List<ColumnModel> columns, SynchronizationModelDTO model) {
         // 初始化表
         if (keySize.get(model.getTable()) == null) {
             keySize.put(model.getTable(), new AtomicLong(0));
         }
-        if ((queryThreadSize + insertThreadSize) > poolSize) {
+    /*    if ((model.getQueryPool() + model.getInsertPool()) > poolSize) {
             logger.info("请合理设置查询线程和插入线程：查询线程数量：{}，插入线程数量:{},总数量:{}", queryThreadSize, insertThreadSize, poolSize);
             return false;
-        }
-        if (queryThreadSize < 1 || insertThreadSize < 1) {
-            logger.info("请合理设置查询线程和插入线程：查询线程数量：{}，插入线程数量:{},总数量:{}", queryThreadSize, insertThreadSize, poolSize);
+        }*/
+        if (model.getQueryPool()  < 1 || model.getInsertPool() < 1) {
+            logger.info("请合理设置查询线程和插入线程：查询线程数量：{}，插入线程数量:{},总数量:{}", model.getQueryPool(), model.getInsertPool());
             return false;
         }
         // 同步到对应的数据源，不一定是自己的数据源
@@ -101,11 +96,11 @@ public class ThreadCurrentService {
             try {
                 querySize.incrementAndGet();
                 insertSize.incrementAndGet();
-                while (querySize.get() > queryThreadSize) {
+                while (querySize.get() >  model.getQueryPool()) {
                     logger.debug("查询等待:执行数量:{},插入的数量:{}", querySize.get(), insertSize.get());
                     TimeUnit.MILLISECONDS.sleep(500);
                 }
-                while (insertSize.get() > insertThreadSize) {
+                while (insertSize.get() > model.getInsertPool()) {
                     logger.debug("插入等待等待:执行数量:{},插入的数量:{}", querySize.get(), insertSize.get());
                     TimeUnit.MILLISECONDS.sleep(500);
                 }
@@ -135,6 +130,7 @@ public class ThreadCurrentService {
         try {
             while (querySize.get() != 1) {
                 logger.info("正在等待最后的查询执行完毕:{}", querySize.get());
+                
                 TimeUnit.SECONDS.sleep(1);
             }
             while (insertSize.get() != 1) {
@@ -164,7 +160,7 @@ public class ThreadCurrentService {
         }
     }
 
-    private void queryInsertSql(SynchronizationModel model, List<ColumnModel> columns, String sql, int columnSize, Long currentId, Long nextId) {
+    private void queryInsertSql(SynchronizationModelDTO model, List<ColumnModel> columns, String sql, int columnSize, Long currentId, Long nextId) {
         threadPoolTaskExecutor.execute(() -> {
             Connection connection = null;
             try {
