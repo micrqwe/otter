@@ -1,0 +1,11 @@
+/target/
+/.idea
+.history/
+*.iml
+.settings/
+.classpath
+.project
+
+src/main/resources/mysql.properties
+
+disconf/

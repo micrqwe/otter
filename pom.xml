@@ -125,6 +125,7 @@
 		<module>shared</module>
 		<module>manager</module>
 		<module>node</module>
+		<module>synchronization</module>
 	</modules>
 
 	<dependencyManagement>
