@@ -10,22 +10,16 @@ import java.sql.Connection;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * @author shaowenxing@cnstrong.cn
  * @since 19:16
  */
-public class MysqlExecuteSqlLogic {
+public class MysqlExecuteSqlLogic extends DatabaseInsertLogic {
 
-    private List<DataSource> dataSourceList;
+
     private Logger logger = LoggerFactory.getLogger(CanalClientService.class);
-    /**
-     * 建立对应的线程池
-     */
-    private ExecutorService cachedThreadPool = null;
+
 
     /**
      * 初始化数据源
@@ -35,7 +29,7 @@ public class MysqlExecuteSqlLogic {
     public MysqlExecuteSqlLogic(DataSource dataSourceList) {
         List<DataSource> dataSources = new ArrayList<>(1);
         dataSources.add(dataSourceList);
-        this.dataSourceList = dataSources;
+        super.dataSourceList = dataSources;
     }
 
     /**
@@ -44,11 +38,8 @@ public class MysqlExecuteSqlLogic {
      * @param dataSourceList
      */
     public MysqlExecuteSqlLogic(List<DataSource> dataSourceList) {
-        this.dataSourceList = dataSourceList;
-        if (dataSourceList.size() == 1) {
-            return;
-        }
-        cachedThreadPool = Executors.newSingleThreadExecutor();
+        super.dataSourceList = dataSourceList;
+
     }
 
     /**
@@ -60,18 +51,8 @@ public class MysqlExecuteSqlLogic {
         if (dataSourceList.size() == 1) {
             return excuteBatch(sql, dataSourceList.get(0));
         }
-        // 多个数据源的时候进行并发进行插入
-        CountDownLatch countDownLatch = new CountDownLatch(dataSourceList.size());
         for (DataSource dataSource : dataSourceList) {
-            cachedThreadPool.execute(() -> {
-                excuteBatch(sql, dataSource);
-                countDownLatch.countDown();
-            });
-        }
-        try {
-            countDownLatch.await();
-        } catch (Exception e) {
-            e.printStackTrace();
+            excuteBatch(sql, dataSource);
         }
         return true;
     }
@@ -88,7 +69,7 @@ public class MysqlExecuteSqlLogic {
                 statement.addBatch(sql.get(i));
             }
             statement.executeBatch();
-            logger.debug("sql进行执行,sql数量:{}，总执行时间:{}", sql.size(), System.currentTimeMillis() - time );
+            logger.debug("sql进行执行,sql数量:{}，总执行时间:{}", sql.size(), System.currentTimeMillis() - time);
         } catch (Exception e) {
             boo = false;
             if (e.getMessage().contains("Duplicate entry") && e.getMessage().contains("'PRIMARY'")) {

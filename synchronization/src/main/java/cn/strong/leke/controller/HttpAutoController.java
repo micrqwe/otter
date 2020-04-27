@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @since 9:48
  */
 @RestController
+@Deprecated
 public class HttpAutoController {
     private AtomicBoolean canal = new AtomicBoolean(false);
     private Logger logger = LoggerFactory.getLogger(HttpAutoController.class);
@@ -26,7 +27,7 @@ public class HttpAutoController {
         }
         canal.set(true);
         new Thread(()->{
-            autoService.synchronizationAuto(table, shardingTable, key, shardingKey,shardingSize, size, sleep);
+//            autoService.synchronizationAuto(table, shardingTable, key, shardingKey,shardingSize, size, sleep);
         }).start();
         return "ok";
     }

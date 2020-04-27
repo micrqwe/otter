@@ -1,17 +1,14 @@
 package cn.strong.leke.service;
 
+import cn.strong.leke.dao.DatabaseInsertLogic;
 import cn.strong.leke.dao.MysqlExecuteSqlLogic;
 import cn.strong.leke.model.ColumnModel;
+import cn.strong.leke.model.SynchronizationModelDTO;
 import cn.strong.leke.model.TableKey;
 import cn.strong.leke.util.ColumnStringUtils;
-import cn.strong.leke.model.SynchronizationModelDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import javax.sql.DataSource;
@@ -24,6 +21,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,14 +32,15 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author shaowenxing@cnstrong.cn
  * @since 9:44
  */
-@Service
 public class ThreadCurrentService {
     private Logger logger = LoggerFactory.getLogger(ThreadCurrentService.class);
 
     private String file;
     private ObjectMapper objectMapper = new ObjectMapper();
-    @Autowired
-    private ThreadPoolTaskExecutor threadPoolTaskExecutor;
+    //    @Autowired
+    private ThreadPoolExecutor queryPoolTaskExecutor;
+    //    @Autowired
+    private ThreadPoolExecutor insertPoolTaskExecutor;
     /**
      * 插入线程控制
      */
@@ -49,16 +50,41 @@ public class ThreadCurrentService {
      */
     private AtomicInteger querySize = new AtomicInteger(0);
 
-    private MysqlExecuteSqlLogic mysqlExecuteSqlLogic;
+    private DatabaseInsertLogic mysqlExecuteSqlLogic;
 
-
+    public ThreadCurrentService(DatabaseInsertLogic databaseInsertLogic) {
+        this.mysqlExecuteSqlLogic = databaseInsertLogic;
+    }
     /**
      * 记录当前表的位置
      */
     private HashMap<String, AtomicLong> keySize = new HashMap<>();
 
-//    @Autowired  会有不同的datasource
-//    private JdbcTemplate jdbcTemplate;
+    /**
+     * 初始化查询线程数据
+     * @param model
+     */
+    private void initParam(SynchronizationModelDTO model) {
+        // 创建线程池
+        ArrayBlockingQueue<Runnable> arrayBlockingQueue = new ArrayBlockingQueue<>(model.getQueryPool());
+        queryPoolTaskExecutor = new ThreadPoolExecutor(model.getQueryPool(), model.getQueryPool(),
+                1, TimeUnit.MINUTES, arrayBlockingQueue, new ThreadFactory() {
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "query_" + model.getTable() + "_synchronization");
+            }
+        }, new ThreadPoolExecutor.AbortPolicy());
+
+        // 创建插入线程池
+        ArrayBlockingQueue<Runnable> insertBlockingQueue = new ArrayBlockingQueue<>(model.getInsertPool());
+        insertPoolTaskExecutor = new ThreadPoolExecutor(model.getInsertPool(), model.getInsertPool(),
+                1, TimeUnit.MINUTES, insertBlockingQueue, new ThreadFactory() {
+            public Thread newThread(Runnable r) {
+                return new Thread(r, "insert_" + model.getTable() + "_synchronization");
+            }
+        }, new ThreadPoolExecutor.AbortPolicy());
+        // 同步到对应的数据源，不一定是自己的数据源
+//        mysqlExecuteSqlLogic = new MysqlExecuteSqlLogic(model.getTargetSource());
+    }
 
     /**
      * 进行同步数据
@@ -76,12 +102,12 @@ public class ThreadCurrentService {
             logger.info("请合理设置查询线程和插入线程：查询线程数量：{}，插入线程数量:{},总数量:{}", queryThreadSize, insertThreadSize, poolSize);
             return false;
         }*/
-        if (model.getQueryPool()  < 1 || model.getInsertPool() < 1) {
+        if (model.getQueryPool() < 1 || model.getInsertPool() < 1) {
             logger.info("请合理设置查询线程和插入线程：查询线程数量：{}，插入线程数量:{},总数量:{}", model.getQueryPool(), model.getInsertPool());
             return false;
         }
-        // 同步到对应的数据源，不一定是自己的数据源
-        mysqlExecuteSqlLogic = new MysqlExecuteSqlLogic(model.getTargetSource());
+        // 参数初始化
+        initParam(model);
         // 拼装SQL
         String idSql = querySqlId(model.getTable(), model.getKey(), model.getSize());
         // 当前位置
@@ -96,7 +122,7 @@ public class ThreadCurrentService {
             try {
                 querySize.incrementAndGet();
                 insertSize.incrementAndGet();
-                while (querySize.get() >  model.getQueryPool()) {
+                while (querySize.get() > model.getQueryPool()) {
                     logger.debug("查询等待:执行数量:{},插入的数量:{}", querySize.get(), insertSize.get());
                     TimeUnit.MILLISECONDS.sleep(500);
                 }
@@ -130,7 +156,7 @@ public class ThreadCurrentService {
         try {
             while (querySize.get() != 1) {
                 logger.info("正在等待最后的查询执行完毕:{}", querySize.get());
-                
+
                 TimeUnit.SECONDS.sleep(1);
             }
             while (insertSize.get() != 1) {
@@ -141,6 +167,11 @@ public class ThreadCurrentService {
             logger.error("", e);
         }
         logger.info("{}:表数据已经同步完成=======================================", model.getTable());
+        // 关闭本次同步任务队列线程池
+        queryPoolTaskExecutor.shutdown();
+        insertPoolTaskExecutor.shutdown();
+        queryPoolTaskExecutor = null;
+        insertPoolTaskExecutor = null;
         return true;
     }
 
@@ -161,7 +192,7 @@ public class ThreadCurrentService {
     }
 
     private void queryInsertSql(SynchronizationModelDTO model, List<ColumnModel> columns, String sql, int columnSize, Long currentId, Long nextId) {
-        threadPoolTaskExecutor.execute(() -> {
+        queryPoolTaskExecutor.execute(() -> {
             Connection connection = null;
             try {
                 // 在变之前进行记录下
@@ -213,7 +244,7 @@ public class ThreadCurrentService {
             insertSize.decrementAndGet();
             return;
         }
-        threadPoolTaskExecutor.execute(() -> {
+        insertPoolTaskExecutor.execute(() -> {
             // 拼装sql
             List<String> strings = new ArrayList<>();
             for (Map.Entry<String, List<String>> map : sqls.entrySet()) {

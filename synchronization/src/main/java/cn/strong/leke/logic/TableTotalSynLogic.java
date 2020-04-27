@@ -1,6 +1,8 @@
 package cn.strong.leke.logic;
 
 import cn.strong.leke.config.DataSourceConfig;
+import cn.strong.leke.dao.DatabaseInsertLogic;
+import cn.strong.leke.dao.MysqlExecuteSqlLogic;
 import cn.strong.leke.model.ColumnModel;
 import cn.strong.leke.model.SynchronizationModelDTO;
 import cn.strong.leke.model.reqVo.CustomTableSynReqVo;
@@ -33,7 +35,6 @@ public class TableTotalSynLogic {
     private Logger logger = LoggerFactory.getLogger(TableTotalSynLogic.class);
     @Autowired
     private DataSourceConfig dataSourceConfig;
-    @Autowired
     private ThreadCurrentService threadCurrentService;
 
     /**
@@ -53,7 +54,10 @@ public class TableTotalSynLogic {
             tables = tableSynReqVo.getTable().split(",");
         }
         for (String t : tables) {
-//            DataSource dataSource = dataSourceConfig.dataSource(url, username, password);
+            // 定义插入的数据源
+            DatabaseInsertLogic databaseInsertLogic = new MysqlExecuteSqlLogic(targetDataSource);
+            threadCurrentService = new ThreadCurrentService(databaseInsertLogic);
+
             Pair<List<ColumnModel>, String> columns = DataBaseUtils.getDatabaseTable(sourceDataSource, t);
             if (CollectionUtils.isEmpty(columns.getKey())) {
                 logger.info(t + "当前表中没有数据");

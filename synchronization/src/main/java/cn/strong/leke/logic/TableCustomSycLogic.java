@@ -1,6 +1,8 @@
 package cn.strong.leke.logic;
 
 import cn.strong.leke.config.DataSourceConfig;
+import cn.strong.leke.dao.DatabaseInsertLogic;
+import cn.strong.leke.dao.MysqlExecuteSqlLogic;
 import cn.strong.leke.model.ColumnModel;
 import cn.strong.leke.model.SourceTableVO;
 import cn.strong.leke.model.SynchronizationModelDTO;
@@ -26,7 +28,7 @@ import java.util.List;
 @Service
 public class TableCustomSycLogic {
     private Logger logger = LoggerFactory.getLogger(TableCustomSycLogic.class);
-    @Autowired
+
     private ThreadCurrentService threadCurrentService;
     @Autowired
     private DataSourceConfig dataSourceConfig;
@@ -54,6 +56,10 @@ public class TableCustomSycLogic {
     public boolean synchronization(SourceTableVO sourceTableVO, String table, String shardingTable, String key, String shardingKey, int shardingSize, int size, int sleep) {
         // 初始化数据源
         DataSource initDataSource = dataSourceConfig.dataSource(sourceTableVO.getSourceUrl(), sourceTableVO.getSourceName(), sourceTableVO.getSourcePassword(), threadPool);
+        // 定义插入的数据源
+        DatabaseInsertLogic databaseInsertLogic = new MysqlExecuteSqlLogic(initDataSource);
+        threadCurrentService = new ThreadCurrentService(databaseInsertLogic);
+
         Pair<List<ColumnModel>, String> columns = DataBaseUtils.getDatabaseTable(initDataSource, table);
         if (CollectionUtils.isEmpty(columns.getKey())) {
             logger.info(table + "当前表中没有数据");

@@ -1,7 +1,6 @@
 package cn.strong.leke.logic;
 
 import cn.strong.leke.service.CanalClientService;
-import cn.strong.leke.service.ThreadCurrentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +11,7 @@ import org.springframework.stereotype.Service;
  * @since 14:33
  */
 @Service
+@Deprecated
 public class AutoService {
     private Logger logger = LoggerFactory.getLogger(AutoService.class);
     @Autowired
@@ -19,7 +19,7 @@ public class AutoService {
     @Autowired
     private TableCustomSycLogic threadCurrentService;
 
-    public void synchronizationAuto(String table, String shardingTable, String key, String shardingKey,int shardingSize, int size, int sleep) {
+   /* public void synchronizationAuto(String table, String shardingTable, String key, String shardingKey,int shardingSize, int size, int sleep) {
         logger.info("正在开始清理canal数据");
         boolean boo = canalClientService.synchronizationAuto(table, shardingTable, key, shardingKey, size, sleep, 1);
         if (!boo) {
@@ -34,5 +34,5 @@ public class AutoService {
         }
         logger.info("分表数据已经同步完成。开始进行订阅增量数据");
         canalClientService.synchronization(table, shardingTable, key, shardingKey, size, sleep, 0);
-    }
+    }*/
 }

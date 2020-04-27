@@ -2,7 +2,6 @@ package cn.strong.leke.controller;
 
 import cn.strong.leke.logic.TableCustomSycLogic;
 import cn.strong.leke.service.CanalClientService;
-import cn.strong.leke.service.ThreadCurrentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @since 9:48
  */
 @RestController
+@Deprecated
 public class HttpController {
     @Autowired
     private TableCustomSycLogic threadCurrentService;
@@ -29,7 +29,7 @@ public class HttpController {
         }
         atomicBoolean.set(true);
         new Thread(()->{
-            threadCurrentService.synchronization(table, shardingTable, key, shardingKey,shardingSize, size, sleep);
+//            threadCurrentService.synchronization(table, shardingTable, key, shardingKey,shardingSize, size, sleep);
         }).start();
         return "ok";
     }
